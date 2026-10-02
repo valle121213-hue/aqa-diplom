@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter;
 import static com.codeborne.selenide.Selenide.$x;
 
 import static com.codeborne.selenide.Condition.visible;
+import static com.codeborne.selenide.Condition.text;
 
 import static com.codeborne.selenide.Selenide.$$x;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -44,15 +45,6 @@ public class PaymentPage {
                     .findBy(com.codeborne.selenide.Condition.text("Операция одобрена Банком."));
 
     //Невалидная карта
-    private final SelenideElement errorTitle =
-            $$x("//div[contains(@class, 'notification__title')]")
-                    .filter(visible)
-                    .findBy(com.codeborne.selenide.Condition.text("Ошибка"));
-
-    private final SelenideElement errorContent =
-            $$x("//div[contains(@class, 'notification__content')]")
-                    .filter(visible)
-                    .findBy(com.codeborne.selenide.Condition.text("Ошибка! Банк отказал в проведении операции."));
 
     private final SelenideElement invalidCardErrorTitle =
             $x("//div[contains(@class, 'notification_status_error')]//div[contains(@class, 'notification__title')]");
@@ -91,6 +83,10 @@ public class PaymentPage {
         cardNumber.setValue(value);
     }
 
+    public String getCardNumberValue() {
+        return cardNumber.getValue();
+    }
+
     public void fillMonth(String value) {
         month.setValue(value);
     }
@@ -115,67 +111,56 @@ public class PaymentPage {
         continueButton.click();
     }
 
-    public String getSuccessTitle() {
-        return successTitle
+    public void shouldShowSuccessTitle(String expectedText) {
+        successTitle
                 .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
     }
 
-    public String getSuccessContent() {
-        return successContent
+    public void shouldShowSuccessContent(String expectedText) {
+        successContent
                 .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
     }
 
-    public String getErrorTitle() {
-        return errorTitle
+    public void shouldShowInvalidCardErrorTitle(String expectedText) {
+        invalidCardErrorTitle
                 .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
     }
 
-    public String getErrorContent() {
-        return errorContent
+    public void shouldShowInvalidCardErrorContent(String expectedText) {
+        invalidCardErrorContent
                 .shouldBe(visible)
-                .getText();
-    }
-
-    public String getInvalidCardErrorTitle() {
-        return invalidCardErrorTitle
-                .shouldBe(visible)
-                .getText();
-    }
-
-    public String getInvalidCardErrorContent() {
-        return invalidCardErrorContent
-                .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
     }
 
     // для ошибочного формата карты
-public String getCardNumberFormatError() {
-    return cardNumberFormatError
-            .shouldBe(visible)
-            .getText();
-}
+    public String getCardNumberFormatError() {
+        return cardNumberFormatError
+                .shouldBe(visible)
+                .getText();
+    }
 
-//для ошибочного формата месяца
-public String getMonthFormatError() {
-    return monthFormatError
-            .shouldBe(visible)
-            .getText();
-}
+    //для ошибочного формата месяца
+    public String getMonthFormatError() {
+        return monthFormatError
+                .shouldBe(visible)
+                .getText();
+    }
+
     public String getMonthPeriodError() {
         return monthPeriodError
                 .shouldBe(visible)
                 .getText();
     }
 
-//Для года
-public String getYearFormatError() {
-    return yearFormatError
-            .shouldBe(visible)
-            .getText();
-}
+    //Для года
+    public String getYearFormatError() {
+        return yearFormatError
+                .shouldBe(visible)
+                .getText();
+    }
 
     public String getYearExpiredError() {
         return yearExpiredError
@@ -187,17 +172,19 @@ public String getYearFormatError() {
         return yearPeriodError.shouldBe(visible).getText();
     }
 
-// Для Владелец
-public String getOwnerFormatError() {
-    return ownerFormatError
-            .shouldBe(visible)
-            .getText();
-}
+    // Для Владелец
+    public String getOwnerFormatError() {
+        return ownerFormatError
+                .shouldBe(visible)
+                .getText();
+    }
+
     public String getOwnerInvalidFormatError() {
         return ownerInvalidFormatError
                 .shouldBe(visible)
                 .getText();
     }
+
     //ПРОВЕРКА ВЕРХНЕГО РЕГИСТРА
     public String getOwnerValue() {
         return owner.getValue();

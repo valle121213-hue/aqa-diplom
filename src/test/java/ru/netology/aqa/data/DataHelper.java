@@ -1,9 +1,14 @@
 package ru.netology.aqa.data;
 
+import com.github.javafaker.Faker;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 public class DataHelper {
+
+    private static final Faker FAKER = new Faker(new Locale("en"));
 
     private DataHelper() {
     }
@@ -30,25 +35,27 @@ public class DataHelper {
                 .format(DateTimeFormatter.ofPattern("yy"));
     }
 
-    // Текущий год в формате YY +1 год
+    // Следующий год в формате YY
     public static String getNextYear() {
         return String.valueOf(
                 Integer.parseInt(getCurrentYear()) + 1
         );
     }
 
+    // Предыдущий год в формате YY
     public static String getPreviousYear() {
         return String.valueOf(
-                Integer.parseInt(getCurrentYear()) - 5
+                Integer.parseInt(getCurrentYear()) - 1
         );
     }
-    // Валидный владелец
+
+    // Случайный валидный владелец
     public static String getValidOwner() {
-        return "MANUAL TESTING";
+        return FAKER.regexify("[A-Z]{3,10} [A-Z]{3,10}");
     }
 
-    // Валидный CVC/CVV
+    // Случайный валидный CVC/CVV
     public static String getValidCvc() {
-        return "123";
+        return FAKER.numerify("###");
     }
 }

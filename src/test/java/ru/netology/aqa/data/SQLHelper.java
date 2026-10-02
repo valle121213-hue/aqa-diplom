@@ -17,25 +17,37 @@ public class SQLHelper {
     private SQLHelper() {
     }
 
-    private static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(
-                DB_URL,
-                DB_USER,
-                DB_PASSWORD
-        );
+    private static Connection getConnection() {
+        try {
+            return DriverManager.getConnection(
+                    DB_URL,
+                    DB_USER,
+                    DB_PASSWORD
+            );
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Не удалось подключиться к базе данных",
+                    e
+            );
+        }
     }
 
-    public static String getPaymentStatus() throws SQLException {
+    public static String getPaymentStatus() {
         var runner = new QueryRunner();
 
         String sql = "SELECT status FROM payment_entity ORDER BY created DESC LIMIT 1";
 
         try (var conn = getConnection()) {
             return runner.query(conn, sql, new ScalarHandler<>());
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Не удалось получить статус платежа",
+                    e
+            );
         }
     }
 
-    public static int getPaymentCount() throws SQLException {
+    public static int getPaymentCount() {
         var runner = new QueryRunner();
 
         String sql = "SELECT COUNT(*) FROM payment_entity";
@@ -43,10 +55,15 @@ public class SQLHelper {
         try (var conn = getConnection()) {
             Number count = runner.query(conn, sql, new ScalarHandler<>());
             return count.intValue();
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Не удалось получить количество платежей",
+                    e
+            );
         }
     }
 
-    public static int getOrderCount() throws SQLException {
+    public static int getOrderCount() {
         var runner = new QueryRunner();
 
         String sql = "SELECT COUNT(*) FROM order_entity";
@@ -54,16 +71,26 @@ public class SQLHelper {
         try (var conn = getConnection()) {
             Number count = runner.query(conn, sql, new ScalarHandler<>());
             return count.intValue();
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Не удалось получить количество заказов",
+                    e
+            );
         }
     }
 
-    public static void cleanDatabase() throws SQLException {
+    public static void cleanDatabase() {
         var runner = new QueryRunner();
 
         try (var conn = getConnection()) {
             runner.update(conn, "DELETE FROM order_entity");
             runner.update(conn, "DELETE FROM payment_entity");
             runner.update(conn, "DELETE FROM credit_request_entity");
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Не удалось очистить базу данных",
+                    e
+            );
         }
     }
 }

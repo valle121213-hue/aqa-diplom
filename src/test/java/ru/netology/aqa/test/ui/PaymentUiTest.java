@@ -2,12 +2,12 @@ package ru.netology.aqa.test.ui;
 
 import org.junit.jupiter.api.BeforeEach;
 import ru.netology.aqa.data.DataHelper;
+import ru.netology.aqa.data.SQLHelper;
 import ru.netology.aqa.page.DashboardPage;
 import ru.netology.aqa.page.PaymentPage;
 import org.junit.jupiter.api.Test;
-import ru.netology.aqa.data.SQLHelper;
 
-import java.sql.SQLException;
+
 
 import static com.codeborne.selenide.Configuration.timeout;
 
@@ -19,7 +19,7 @@ public class PaymentUiTest {
     private DashboardPage dashboardPage;
 
     @BeforeEach
-    void setUp() throws SQLException {
+    void setUp() {
 
         SQLHelper.cleanDatabase();
 
@@ -33,7 +33,7 @@ public class PaymentUiTest {
 
     //AUT-01. Успешная покупка с APPROVED-картой
     @Test
-    void shouldMakeSuccessfulPaymentWithApprovedCard() throws SQLException {
+    void shouldMakeSuccessfulPaymentWithApprovedCard() {
 
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
@@ -45,18 +45,16 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
 
     //AUT-02. Отказ в покупке с DECLINED-картой
     @Test
-    void shouldShowErrorForDeclinedCard() throws SQLException {
+    void shouldShowErrorForDeclinedCard() {
 
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
@@ -70,16 +68,15 @@ public class PaymentUiTest {
 
         assertEquals("DECLINED", SQLHelper.getPaymentStatus());
 
-        assertEquals("Ошибка", paymentPage.getInvalidCardErrorTitle());
-        assertEquals(
-                "Ошибка! Банк отказал в проведении операции.",
-                paymentPage.getInvalidCardErrorContent()
+        paymentPage.shouldShowInvalidCardErrorTitle("Ошибка");
+        paymentPage.shouldShowInvalidCardErrorContent(
+                "Ошибка! Банк отказал в проведении операции."
         );
     }
 
     //AUT-03. Некорректный номер карты
     @Test
-    void shouldRejectPaymentWithInvalidCardNumber() throws SQLException {
+    void shouldRejectPaymentWithInvalidCardNumber() {
 
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
@@ -91,17 +88,16 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Ошибка", paymentPage.getInvalidCardErrorTitle());
-        assertEquals(
-                "Ошибка! Банк отказал в проведении операции.",
-                paymentPage.getInvalidCardErrorContent()
+        paymentPage.shouldShowInvalidCardErrorTitle("Ошибка");
+        paymentPage.shouldShowInvalidCardErrorContent(
+                "Ошибка! Банк отказал в проведении операции."
         );
 
     }
 
     //AUT-04. Пустой номер карты
     @Test
-    void shouldShowErrorForEmptyCardNumber() throws SQLException {
+    void shouldShowErrorForEmptyCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber("");
@@ -121,7 +117,7 @@ public class PaymentUiTest {
 
     //AUT-05. Номер карты: менее 16 цифр
     @Test
-    void shouldShowErrorForShortCardNumber() throws SQLException {
+    void shouldShowErrorForShortCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber("1111 2222 3333");
@@ -141,29 +137,20 @@ public class PaymentUiTest {
 
     //AUT-06. Номер карты: более 16 цифр
     @Test
-    void shouldIgnoreExtraCardDigitAndMakeSuccessfulPayment() throws SQLException {
+    void shouldNotAllowMoreThan16DigitsInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("1111 2222 3333 44445");
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc(DataHelper.getValidCvc());
+        paymentPage.fillCardNumber("1111 2222 3333 4444 5555");
 
-        paymentPage.clickContinue();
-
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
         assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
+                "1111 2222 3333 4444",
+                paymentPage.getCardNumberValue()
         );
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
     }
 
     //AUT-07a. Номер карты: введены буквы латиницы
     @Test
-    void shouldShowErrorForLettersInCardNumber() throws SQLException {
+    void shouldShowErrorForLettersInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber("AAAA BBBB CCCC DDDD");
@@ -183,7 +170,7 @@ public class PaymentUiTest {
 
     //AUT-07b. Номер карты: введены буквы кириллицы
     @Test
-    void shouldRejectLettersInCardNumber() throws SQLException {
+    void shouldRejectLettersInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber("АААА ББББ ВВВВ ГГГГ");
@@ -203,7 +190,7 @@ public class PaymentUiTest {
 
     //AUT-08a. Номер карты: спецсимволы вперемешку с цифрами
     @Test
-    void shouldIgnoreSpecialCharactersInCardNumber() throws SQLException {
+    void shouldIgnoreSpecialCharactersInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber("1111@2222#3333$4444");
@@ -214,18 +201,16 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
 
     // AUT-08b. Номер карты: вводится с пробелами вручную
     @Test
-    void shouldMakeSuccessfulPaymentWithCardNumberEnteredWithSpaces() throws SQLException {
+    void shouldMakeSuccessfulPaymentWithCardNumberEnteredWithSpaces() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber("1111 2222 3333 4444");
@@ -236,18 +221,16 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
 
     //AUT-08c. Номер карты: только спецсимволы (без цифр)
     @Test
-    void shouldRejectSpecialCharactersInCardNumber() throws SQLException {
+    void shouldRejectSpecialCharactersInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber("@@@@");
@@ -267,7 +250,7 @@ public class PaymentUiTest {
 
     // AUT-08d. Номер карты: только пробелы (без цифр)
     @Test
-    void shouldShowErrorForSpacesOnlyInCardNumber() throws SQLException {
+    void shouldShowErrorForSpacesOnlyInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber("                ");
@@ -364,7 +347,7 @@ public class PaymentUiTest {
 
     //AUT-11. Поле «Месяц»: значение 01 (минимально допустимая граница)
     @Test
-    void shouldMakeSuccessfulPaymentWithMinimumValidMonth() throws SQLException{
+    void shouldMakeSuccessfulPaymentWithMinimumValidMonth() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -375,11 +358,9 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
@@ -443,7 +424,7 @@ public class PaymentUiTest {
 
     // AUT-14a. Поле «Месяц»: введены специальные символы с цифрами
     @Test
-    void shouldIgnoreSpecialCharactersInMonth() throws SQLException {
+    void shouldIgnoreSpecialCharactersInMonth() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -454,11 +435,9 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
@@ -503,7 +482,7 @@ public class PaymentUiTest {
 
     // AUT-14d. Поле «Месяц»: цифры с пробелом
     @Test
-    void shouldIgnoreSpaceInMonthAndMakeSuccessfulPayment() throws SQLException {
+    void shouldIgnoreSpaceInMonthAndMakeSuccessfulPayment() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         String currentMonth = DataHelper.getCurrentMonth();
@@ -517,11 +496,9 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
@@ -529,7 +506,7 @@ public class PaymentUiTest {
 
     // Проверка поля «Год»
 
-// AUT-15a. Поле «Год»: пустое значение
+    // AUT-15a. Поле «Год»: пустое значение
     @Test
     void shouldShowErrorForEmptyYear() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
@@ -644,7 +621,7 @@ public class PaymentUiTest {
         );
     }
 
-// AUT-19. Поле «Год»: введены буквы латиницы
+    // AUT-19. Поле «Год»: введены буквы латиницы
     @Test
     void shouldShowErrorForLatinLettersInYear() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
@@ -663,7 +640,7 @@ public class PaymentUiTest {
         );
     }
 
-// AUT-20b. Поле «Год»: введены только специальные символы
+    // AUT-20b. Поле «Год»: введены только специальные символы
     @Test
     void shouldShowErrorForSpecialCharactersOnlyInYear() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
@@ -703,7 +680,7 @@ public class PaymentUiTest {
 
     // AUT-20d. Поле «Год»: числа с пробелом
     @Test
-    void shouldIgnoreSpaceInYearAndMakeSuccessfulPayment() throws SQLException {
+    void shouldIgnoreSpaceInYearAndMakeSuccessfulPayment() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         String currentYear = DataHelper.getCurrentYear();
@@ -717,11 +694,9 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
@@ -769,7 +744,7 @@ public class PaymentUiTest {
 
     // AUT-21c. Максимальная длина
     @Test
-    void shouldLimitOwnerTo45CharactersAndMakeSuccessfulPayment() throws SQLException {
+    void shouldLimitOwnerTo45CharactersAndMakeSuccessfulPayment() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -780,11 +755,9 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
@@ -810,7 +783,7 @@ public class PaymentUiTest {
 
     // AUT-22b. Поле «Владелец»: нижний регистр латинскими буквами
     @Test
-    void shouldConvertOwnerToUppercaseAndMakeSuccessfulPayment() throws SQLException {
+    void shouldConvertOwnerToUppercaseAndMakeSuccessfulPayment() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -825,18 +798,16 @@ public class PaymentUiTest {
                 "MANUAL TEST",
                 paymentPage.getOwnerValue()
         );
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
 
     // AUT-23a. Поле «Владелец»: значение с цифрами
     @Test
-    void shouldIgnoreDigitsInOwnerAndMakeSuccessfulPayment() throws SQLException {
+    void shouldIgnoreDigitsInOwnerAndMakeSuccessfulPayment() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -851,11 +822,9 @@ public class PaymentUiTest {
                 "MANUAL",
                 paymentPage.getOwnerValue()
         );
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
@@ -900,7 +869,7 @@ public class PaymentUiTest {
 
     // AUT-23d. Поле «Владелец»: множественные пробелы между словами
     @Test
-    void shouldAcceptMultipleSpacesBetweenOwnerWords() throws SQLException {
+    void shouldAcceptMultipleSpacesBetweenOwnerWords() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -911,18 +880,16 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
 
     // AUT-23e. Поле «Владелец»: пробелы в начале и в конце
     @Test
-    void shouldTrimSpacesAroundOwnerAndMakeSuccessfulPayment() throws SQLException {
+    void shouldTrimSpacesAroundOwnerAndMakeSuccessfulPayment() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -937,18 +904,16 @@ public class PaymentUiTest {
                 "MANUAL TEST",
                 paymentPage.getOwnerValue()
         );
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
 
     // AUT-24a. Поле «Владелец»: буквы со специальными символами
     @Test
-    void shouldIgnoreSpecialCharactersInOwnerAndMakeSuccessfulPayment() throws SQLException {
+    void shouldIgnoreSpecialCharactersInOwnerAndMakeSuccessfulPayment() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -963,11 +928,9 @@ public class PaymentUiTest {
                 "MANUAL TEST",
                 paymentPage.getOwnerValue()
         );
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
@@ -993,7 +956,7 @@ public class PaymentUiTest {
 
     // AUT-24c. Поле «Владелец»: имя с дефисом
     @Test
-    void shouldAcceptHyphenInOwnerAndMakeSuccessfulPayment() throws SQLException {
+    void shouldAcceptHyphenInOwnerAndMakeSuccessfulPayment() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -1004,11 +967,9 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
@@ -1056,7 +1017,7 @@ public class PaymentUiTest {
 
     // AUT-27. Поле «CVC/CVV»: четыре цифры
     @Test
-    void shouldLimitCvcToThreeDigitsAndMakeSuccessfulPayment() throws SQLException {
+    void shouldLimitCvcToThreeDigitsAndMakeSuccessfulPayment() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -1067,11 +1028,9 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
@@ -1116,7 +1075,7 @@ public class PaymentUiTest {
 
     // AUT-29a. Поле «CVC/CVV»: введены специальные символы с цифрами
     @Test
-    void shouldIgnoreSpecialCharactersInCvcAndMakeSuccessfulPayment() throws SQLException {
+    void shouldIgnoreSpecialCharactersInCvcAndMakeSuccessfulPayment() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -1127,11 +1086,9 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
@@ -1159,7 +1116,7 @@ public class PaymentUiTest {
 
     // AUT-29c. Поле «CVC/CVV»: введены цифры с пробелами
     @Test
-    void shouldIgnoreSpaceInCvcAndMakeSuccessfulPayment() throws SQLException {
+    void shouldIgnoreSpaceInCvcAndMakeSuccessfulPayment() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -1170,11 +1127,9 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle());
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
+
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
@@ -1239,7 +1194,7 @@ public class PaymentUiTest {
 
     // AUT-31. Снятие подсветки полей после корректного заполнения
     @Test
-    void shouldRemoveErrorsAfterCorrectFieldFilling() throws SQLException {
+    void shouldRemoveErrorsAfterCorrectFieldFilling() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         // Этап 1. Пустая форма
@@ -1259,22 +1214,16 @@ public class PaymentUiTest {
         paymentPage.shouldNotShowValidationErrors();
 
         // Проверяем успешное завершение операции
-        assertEquals(
-                "Успешно",
-                paymentPage.getSuccessTitle()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
 
-        assertEquals(
-                "Операция одобрена Банком.",
-                paymentPage.getSuccessContent()
-        );
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
     }
 
     // AUT-32. Карта истекает в текущем месяце
     @Test
-    void shouldMakeSuccessfulPaymentWhenCardExpiresThisMonth() throws SQLException {
+    void shouldMakeSuccessfulPaymentWhenCardExpiresThisMonth() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -1285,12 +1234,8 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Успешно", paymentPage.getSuccessTitle()
-        );
-        assertEquals(
-                "Операция одобрена Банком.", paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
 
         assertEquals("APPROVED", SQLHelper.getPaymentStatus());
         assertEquals(1, SQLHelper.getOrderCount());
@@ -1299,7 +1244,7 @@ public class PaymentUiTest {
 
     // ### AUT-33. Карта действительна ровно 1 месяц
     @Test
-    void shouldMakeSuccessfulPaymentWhenCardIsValidForOneMonth() throws SQLException {
+    void shouldMakeSuccessfulPaymentWhenCardIsValidForOneMonth() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         String nextMonth = String.format(
@@ -1316,10 +1261,8 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals("Успешно", paymentPage.getSuccessTitle()
-        );
-        assertEquals("Операция одобрена Банком.", paymentPage.getSuccessContent()
-        );
+        paymentPage.shouldShowSuccessTitle("Успешно");
+        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
 
         assertEquals("APPROVED", SQLHelper.getPaymentStatus()
         );

@@ -29,6 +29,8 @@ dependencies {
     testImplementation 'org.projectlombok:lombok:1.18.36'
     testCompileOnly 'org.projectlombok:lombok:1.18.36'
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.36'
+
+    testImplementation 'com.github.javafaker:javafaker:1.0.2'
 }
 
 test {
