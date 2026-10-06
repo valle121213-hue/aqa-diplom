@@ -218,7 +218,8 @@ public class PaymentPage {
     public void shouldNotShowOwnerRequiredError() {
         ownerFormatError.shouldNotBe(visible);
     }
-//Под полем «Владелец» не появилось сообщение «Неверный формат».
+
+    //Под полем «Владелец» не появилось сообщение «Неверный формат».
     public void shouldNotShowOwnerInvalidFormatError() {
         ownerInvalidFormatError.shouldNotBe(visible);
     }
@@ -275,6 +276,7 @@ public class PaymentPage {
             );
         }
     }
+
     // проверка полей месяц и год
     public void shouldNotShowMonthErrors() {
         assertAll(
@@ -282,6 +284,7 @@ public class PaymentPage {
                 () -> monthPeriodError.shouldNotBe(visible)
         );
     }
+
     public void shouldNotShowYearErrors() {
         assertAll(
                 () -> yearFormatError.shouldNotBe(visible),
@@ -289,7 +292,6 @@ public class PaymentPage {
                 () -> yearPeriodError.shouldNotBe(visible)
         );
     }
-
 
 
     public void shouldNotShowValidationErrors() {

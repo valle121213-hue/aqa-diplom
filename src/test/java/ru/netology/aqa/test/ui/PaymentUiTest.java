@@ -686,7 +686,7 @@ public class PaymentUiTest {
         paymentPage.shouldShowOwnerFormatError("Поле обязательно для заполнения");
     }
 
-// AUT-23d. Поле «Владелец»: множественные пробелы между словами
+    // AUT-23d. Поле «Владелец»: множественные пробелы между словами
     @Test
     void shouldReduceMultipleSpacesBetweenOwnerWords() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
@@ -749,8 +749,7 @@ public class PaymentUiTest {
     }
 
 
-
-// AUT-24c. Поле «Владелец»: имя с дефисом
+    // AUT-24c. Поле «Владелец»: имя с дефисом
     @Test
     void shouldAcceptOwnerWithHyphen() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
@@ -767,7 +766,6 @@ public class PaymentUiTest {
         paymentPage.shouldNotShowOwnerRequiredError();
         paymentPage.shouldNotShowOwnerInvalidFormatError();
     }
-
 
 
     //Проверка поля «CVC/CVV»
@@ -879,7 +877,7 @@ public class PaymentUiTest {
         paymentPage.shouldNotShowOwnerRequiredError();
     }
 
-// AUT-29c. Поле «CVC/CVV»: введены цифры с пробелами
+    // AUT-29c. Поле «CVC/CVV»: введены цифры с пробелами
     @Test
     void shouldIgnoreSpaceInCvc() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
@@ -954,7 +952,7 @@ public class PaymentUiTest {
     }
 
 
-// AUT-32. Карта истекает в текущем месяце
+    // AUT-32. Карта истекает в текущем месяце
     @Test
     void shouldAcceptCardExpiringThisMonth() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
@@ -972,7 +970,7 @@ public class PaymentUiTest {
     }
 
 
-// AUT-33. Карта действительна ровно 1 месяц
+    // AUT-33. Карта действительна ровно 1 месяц
     @Test
     void shouldAcceptCardValidForOneMonth() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
@@ -991,7 +989,6 @@ public class PaymentUiTest {
         paymentPage.shouldNotShowMonthErrors();
         paymentPage.shouldNotShowYearErrors();
     }
-
 
 
     // ### AUT-34. Поле «Год»: отдалённое будущее (99)

@@ -88,6 +88,7 @@ public class DataHelper {
 
         return owner.toString();
     }
+
     // для Латиницы
     public static String getLatinLetters(int length) {
         StringBuilder value = new StringBuilder();
