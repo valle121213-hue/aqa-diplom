@@ -1,18 +1,17 @@
 package ru.netology.aqa.page;
 
+import com.codeborne.selenide.Condition;
 import com.codeborne.selenide.SelenideElement;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 import static com.codeborne.selenide.Selenide.$x;
 
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Condition.text;
+import static com.codeborne.selenide.Condition.value;
 
 import static com.codeborne.selenide.Selenide.$$x;
 import static org.junit.jupiter.api.Assertions.assertAll;
-import static ru.netology.aqa.data.DataHelper.getCurrentYear;
+
 
 public class PaymentPage {
 
@@ -83,8 +82,10 @@ public class PaymentPage {
         cardNumber.setValue(value);
     }
 
-    public String getCardNumberValue() {
-        return cardNumber.getValue();
+    public void shouldHaveCardNumberValue(String expectedValue) {
+        cardNumber
+                .shouldBe(visible)
+                .shouldHave(value(expectedValue));
     }
 
     public void fillMonth(String value) {
@@ -103,8 +104,22 @@ public class PaymentPage {
         cvc.setValue(value);
     }
 
-    public String getYearValue() {
-        return year.getValue();
+    public void shouldHaveYearValue(String expectedValue) {
+        year
+                .shouldBe(visible)
+                .shouldHave(value(expectedValue));
+    }
+
+    public void shouldHaveMonthValue(String expectedValue) {
+        month
+                .shouldBe(visible)
+                .shouldHave(value(expectedValue));
+    }
+
+    public void shouldHaveCvcValue(String expectedValue) {
+        cvc
+                .shouldBe(visible)
+                .shouldHave(value(expectedValue));
     }
 
     public void clickContinue() {
@@ -135,71 +150,147 @@ public class PaymentPage {
                 .shouldHave(text(expectedText));
     }
 
-    // для ошибочного формата карты
-    public String getCardNumberFormatError() {
-        return cardNumberFormatError
+    // Для ошибочного формата карты
+    public void shouldShowCardNumberFormatError(String expectedText) {
+        cardNumberFormatError
                 .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
     }
 
-    //для ошибочного формата месяца
-    public String getMonthFormatError() {
-        return monthFormatError
+    // Для ошибочного формата месяца
+    public void shouldShowMonthFormatError(String expectedText) {
+        monthFormatError
                 .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
     }
 
-    public String getMonthPeriodError() {
-        return monthPeriodError
+    public void shouldShowMonthPeriodError(String expectedText) {
+        monthPeriodError
                 .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
     }
 
-    //Для года
-    public String getYearFormatError() {
-        return yearFormatError
+    // Для года
+    public void shouldShowYearFormatError(String expectedText) {
+        yearFormatError
                 .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
     }
 
-    public String getYearExpiredError() {
-        return yearExpiredError
+    public void shouldShowYearExpiredError(String expectedText) {
+        yearExpiredError
                 .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
     }
 
-    public String getYearPeriodError() {
-        return yearPeriodError.shouldBe(visible).getText();
-    }
-
-    // Для Владелец
-    public String getOwnerFormatError() {
-        return ownerFormatError
+    public void shouldShowYearPeriodError(String expectedText) {
+        yearPeriodError
                 .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
     }
 
-    public String getOwnerInvalidFormatError() {
-        return ownerInvalidFormatError
+    // Для владельца
+    public void shouldShowOwnerFormatError(String expectedText) {
+        ownerFormatError
                 .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
     }
 
-    //ПРОВЕРКА ВЕРХНЕГО РЕГИСТРА
-    public String getOwnerValue() {
-        return owner.getValue();
-    }
-
-    //CVC
-    public String getCvcFormatError() {
-        return cvcFormatError
+    public void shouldShowOwnerInvalidFormatError(String expectedText) {
+        ownerInvalidFormatError
                 .shouldBe(visible)
-                .getText();
+                .shouldHave(text(expectedText));
+    }
+
+    public void shouldHaveOwnerValue(String expectedValue) {
+        owner
+                .shouldBe(visible)
+                .shouldHave(value(expectedValue));
+    }
+
+    // CVC
+    public void shouldShowCvcFormatError(String expectedText) {
+        cvcFormatError
+                .shouldBe(visible)
+                .shouldHave(text(expectedText));
     }
 
     public void shouldNotShowOwnerRequiredError() {
         ownerFormatError.shouldNotBe(visible);
     }
+//Под полем «Владелец» не появилось сообщение «Неверный формат».
+    public void shouldNotShowOwnerInvalidFormatError() {
+        ownerInvalidFormatError.shouldNotBe(visible);
+    }
+
+    public void shouldHaveCardNumberLength(int expectedLength) {
+        cardNumber.shouldBe(visible);
+
+        String actualValue = cardNumber.getValue();
+        String digitsOnly = actualValue.replace(" ", "");
+
+        if (digitsOnly.length() != expectedLength) {
+            throw new AssertionError(
+                    "Ожидалось " + expectedLength
+                            + " цифр, но получено " + digitsOnly.length()
+            );
+        }
+    }
+
+    public void shouldHaveMonthLength(int expectedLength) {
+        month.shouldBe(visible);
+
+        String actualValue = month.getValue();
+
+        if (actualValue.length() != expectedLength) {
+            throw new AssertionError(
+                    "Ожидалось " + expectedLength
+                            + " цифры, но получено " + actualValue.length()
+            );
+        }
+    }
+
+    public void shouldHaveYearLength(int expectedLength) {
+        year.shouldBe(visible);
+
+        String actualValue = year.getValue();
+
+        if (actualValue.length() != expectedLength) {
+            throw new AssertionError(
+                    "Ожидалось " + expectedLength
+                            + " цифры, но получено " + actualValue.length()
+            );
+        }
+    }
+
+    public void shouldHaveOwnerLength(int expectedLength) {
+        owner.shouldBe(visible);
+
+        String actualValue = owner.getValue();
+
+        if (actualValue.length() != expectedLength) {
+            throw new AssertionError(
+                    "Ожидалось " + expectedLength
+                            + " символов, но получено " + actualValue.length()
+            );
+        }
+    }
+    // проверка полей месяц и год
+    public void shouldNotShowMonthErrors() {
+        assertAll(
+                () -> monthFormatError.shouldNotBe(visible),
+                () -> monthPeriodError.shouldNotBe(visible)
+        );
+    }
+    public void shouldNotShowYearErrors() {
+        assertAll(
+                () -> yearFormatError.shouldNotBe(visible),
+                () -> yearExpiredError.shouldNotBe(visible),
+                () -> yearPeriodError.shouldNotBe(visible)
+        );
+    }
+
+
 
     public void shouldNotShowValidationErrors() {
         assertAll(
@@ -213,5 +304,6 @@ public class PaymentPage {
                 () -> cvcFormatError.shouldNotBe(visible)
         );
     }
+
 }
 

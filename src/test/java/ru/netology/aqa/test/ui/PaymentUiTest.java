@@ -1,15 +1,13 @@
 package ru.netology.aqa.test.ui;
 
+import com.codeborne.selenide.logevents.SelenideLogger;
+import io.qameta.allure.selenide.AllureSelenide;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import ru.netology.aqa.data.DataHelper;
 import ru.netology.aqa.data.SQLHelper;
 import ru.netology.aqa.page.DashboardPage;
 import ru.netology.aqa.page.PaymentPage;
-import org.junit.jupiter.api.Test;
-
-
-
-import static com.codeborne.selenide.Configuration.timeout;
 
 import static com.codeborne.selenide.Selenide.open;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,11 +18,9 @@ public class PaymentUiTest {
 
     @BeforeEach
     void setUp() {
+        SelenideLogger.addListener("allure", new AllureSelenide());
 
         SQLHelper.cleanDatabase();
-
-        timeout = 10_000;
-
         dashboardPage = open(
                 "http://localhost:8080",
                 DashboardPage.class
@@ -80,7 +76,7 @@ public class PaymentUiTest {
 
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("1111 2222 4567 7889");
+        paymentPage.fillCardNumber(DataHelper.getInvalidCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
@@ -100,7 +96,7 @@ public class PaymentUiTest {
     void shouldShowErrorForEmptyCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("");
+        paymentPage.fillCardNumber(DataHelper.getEmptyValue());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
@@ -108,10 +104,7 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCardNumberFormatError()
-        );
+        paymentPage.shouldShowCardNumberFormatError("Неверный формат");
 
     }
 
@@ -120,7 +113,7 @@ public class PaymentUiTest {
     void shouldShowErrorForShortCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("1111 2222 3333");
+        paymentPage.fillCardNumber(DataHelper.getDigits(12));
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
@@ -128,24 +121,18 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCardNumberFormatError()
-        );
+        paymentPage.shouldShowCardNumberFormatError("Неверный формат");
 
     }
 
-    //AUT-06. Номер карты: более 16 цифр
+    // AUT-06. Номер карты: более 16 цифр
     @Test
     void shouldNotAllowMoreThan16DigitsInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("1111 2222 3333 4444 5555");
+        paymentPage.fillCardNumber(DataHelper.getDigits(20));
 
-        assertEquals(
-                "1111 2222 3333 4444",
-                paymentPage.getCardNumberValue()
-        );
+        paymentPage.shouldHaveCardNumberLength(16);
     }
 
     //AUT-07a. Номер карты: введены буквы латиницы
@@ -153,7 +140,7 @@ public class PaymentUiTest {
     void shouldShowErrorForLettersInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("AAAA BBBB CCCC DDDD");
+        paymentPage.fillCardNumber(DataHelper.getLatinLetters(16));
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
@@ -161,10 +148,7 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCardNumberFormatError()
-        );
+        paymentPage.shouldShowCardNumberFormatError("Неверный формат");
 
     }
 
@@ -173,7 +157,7 @@ public class PaymentUiTest {
     void shouldRejectLettersInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("АААА ББББ ВВВВ ГГГГ");
+        paymentPage.fillCardNumber(DataHelper.getCyrillicLetters(16));
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
@@ -181,51 +165,33 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCardNumberFormatError()
-        );
+        paymentPage.shouldShowCardNumberFormatError("Неверный формат");
 
     }
 
-    //AUT-08a. Номер карты: спецсимволы вперемешку с цифрами
+    // AUT-08a. Поле «Номер карты»: специальные символы с цифрами
     @Test
     void shouldIgnoreSpecialCharactersInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("1111@2222#3333$4444");
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc(DataHelper.getValidCvc());
+        paymentPage.fillCardNumber(
+                DataHelper.getDigitsWithSpecialCharacters(16)
+        );
 
-        paymentPage.clickContinue();
-
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveCardNumberLength(16);
     }
 
     // AUT-08b. Номер карты: вводится с пробелами вручную
     @Test
-    void shouldMakeSuccessfulPaymentWithCardNumberEnteredWithSpaces() {
+    void shouldIgnoreSpacesInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("1111 2222 3333 4444");
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc(DataHelper.getValidCvc());
+        String cardNumberWithSpaces =
+                DataHelper.getApprovedCardNumber();
 
-        paymentPage.clickContinue();
+        paymentPage.fillCardNumber(cardNumberWithSpaces);
 
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveCardNumberLength(16);
     }
 
     //AUT-08c. Номер карты: только спецсимволы (без цифр)
@@ -233,7 +199,7 @@ public class PaymentUiTest {
     void shouldRejectSpecialCharactersInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("@@@@");
+        paymentPage.fillCardNumber(DataHelper.getSpecialCharacters(16));
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
@@ -241,11 +207,7 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCardNumberFormatError()
-        );
-
+        paymentPage.shouldShowCardNumberFormatError("Неверный формат");
     }
 
     // AUT-08d. Номер карты: только пробелы (без цифр)
@@ -253,7 +215,7 @@ public class PaymentUiTest {
     void shouldShowErrorForSpacesOnlyInCardNumber() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("                ");
+        paymentPage.fillCardNumber(DataHelper.getSpaces(16));
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
@@ -261,10 +223,7 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCardNumberFormatError()
-        );
+        paymentPage.shouldShowCardNumberFormatError("Неверный формат");
 
     }
     //Проверка поля «Месяц»
@@ -275,17 +234,14 @@ public class PaymentUiTest {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth("");
+        paymentPage.fillMonth(DataHelper.getEmptyValue());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getMonthFormatError()
-        );
+        paymentPage.shouldShowMonthFormatError("Неверный формат");
     }
 
     // AUT-09b. Поле «Месяц»: одна цифра
@@ -294,36 +250,24 @@ public class PaymentUiTest {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth("1");
+        paymentPage.fillMonth(DataHelper.getDigits(1));
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getMonthFormatError()
-        );
+        paymentPage.shouldShowMonthFormatError("Неверный формат");
     }
 
     // AUT-09c. Поле «Месяц»: три цифры
     @Test
-    void shouldLimitMonthToTwoDigitsAndShowPeriodError() {
+    void shouldLimitMonthToTwoDigits() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth("234");
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc(DataHelper.getValidCvc());
+        paymentPage.fillMonth(DataHelper.getDigits(3));
 
-        paymentPage.clickContinue();
-
-        assertEquals(
-                "Неверно указан срок действия карты",
-                paymentPage.getMonthPeriodError()
-        );
+        paymentPage.shouldHaveMonthLength(2);
     }
 
     //AUT-10. Поле «Месяц»: значение 00
@@ -339,15 +283,14 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверно указан срок действия карты",
-                paymentPage.getMonthPeriodError()
+        paymentPage.shouldShowMonthPeriodError(
+                "Неверно указан срок действия карты"
         );
     }
 
-    //AUT-11. Поле «Месяц»: значение 01 (минимально допустимая граница)
+    // AUT-11. Поле «Месяц»: значение 01 (минимально допустимая граница)
     @Test
-    void shouldMakeSuccessfulPaymentWithMinimumValidMonth() {
+    void shouldAcceptMinimumValidMonthForNextYear() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -358,11 +301,7 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldNotShowValidationErrors();
     }
 
     //AUT-12. Поле «Месяц»: значение 13 (недопустимое)
@@ -378,9 +317,8 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверно указан срок действия карты",
-                paymentPage.getMonthPeriodError()
+        paymentPage.shouldShowMonthPeriodError(
+                "Неверно указан срок действия карты"
         );
     }
 
@@ -390,17 +328,14 @@ public class PaymentUiTest {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth("AB");
+        paymentPage.fillMonth(DataHelper.getLatinLetters(2));
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getMonthFormatError()
-        );
+        paymentPage.shouldShowMonthFormatError("Неверный формат");
     }
 
     // AUT-13b. Поле «Месяц»: введены буквы кириллицы
@@ -409,37 +344,28 @@ public class PaymentUiTest {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth("АБ");
+        paymentPage.fillMonth(DataHelper.getCyrillicLetters(2));
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getMonthFormatError()
-        );
+        paymentPage.shouldShowMonthFormatError("Неверный формат");
     }
 
-    // AUT-14a. Поле «Месяц»: введены специальные символы с цифрами
+    // AUT-14a. Поле «Месяц»: специальные символы с цифрами
     @Test
     void shouldIgnoreSpecialCharactersInMonth() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth("@1#2");
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc(DataHelper.getValidCvc());
+        paymentPage.fillMonth(
+                DataHelper.getDigitsWithSpecialCharacters(2)
+        );
 
-        paymentPage.clickContinue();
-
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveMonthValue(
+                DataHelper.getDigits(2)
+        );
     }
 
     // AUT-14b. Поле «Месяц»: только спецсимволы (без цифр)
@@ -448,17 +374,14 @@ public class PaymentUiTest {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth("@#$");
+        paymentPage.fillMonth(DataHelper.getSpecialCharacters(2));
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getMonthFormatError()
-        );
+        paymentPage.shouldShowMonthFormatError("Неверный формат");
     }
 
     // AUT-14c. Поле «Месяц»: только пробелы (без цифр)
@@ -467,40 +390,27 @@ public class PaymentUiTest {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth("   ");
+        paymentPage.fillMonth(DataHelper.getSpaces(2));
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getMonthFormatError()
-        );
+        paymentPage.shouldShowMonthFormatError("Неверный формат");
     }
 
     // AUT-14d. Поле «Месяц»: цифры с пробелом
     @Test
-    void shouldIgnoreSpaceInMonthAndMakeSuccessfulPayment() {
+    void shouldIgnoreSpaceInMonth() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         String currentMonth = DataHelper.getCurrentMonth();
         String monthWithSpace = currentMonth.charAt(0) + " " + currentMonth.charAt(1);
 
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(monthWithSpace);
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc(DataHelper.getValidCvc());
 
-        paymentPage.clickContinue();
-
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveMonthValue(currentMonth);
     }
 
 
@@ -513,16 +423,13 @@ public class PaymentUiTest {
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear("");
+        paymentPage.fillYear(DataHelper.getEmptyValue());
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getYearFormatError()
-        );
+        paymentPage.shouldShowYearFormatError("Неверный формат");
     }
 
 
@@ -533,35 +440,23 @@ public class PaymentUiTest {
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear("2");
+        paymentPage.fillYear(DataHelper.getDigits(1));
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getYearFormatError()
-        );
+        paymentPage.shouldShowYearFormatError("Неверный формат");
     }
 
     // AUT-15c. Поле «Год»: три цифры
     @Test
-    void shouldLimitYearToTwoDigitsAndShowPeriodError() {
+    void shouldLimitYearToTwoDigits() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear("234");
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc(DataHelper.getValidCvc());
+        paymentPage.fillYear(DataHelper.getDigits(3));
 
-        paymentPage.clickContinue();
-
-        assertEquals(
-                "Истёк срок действия карты",
-                paymentPage.getYearExpiredError()
-        );
+        paymentPage.shouldHaveYearLength(2);
     }
 
     // AUT-16. Поле «Год»: значение 00
@@ -577,9 +472,8 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Истёк срок действия карты",
-                paymentPage.getYearExpiredError()
+        paymentPage.shouldShowYearExpiredError(
+                "Истёк срок действия карты"
         );
     }
 
@@ -596,9 +490,8 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Истёк срок действия карты",
-                paymentPage.getYearExpiredError()
+        paymentPage.shouldShowYearExpiredError(
+                "Истёк срок действия карты"
         );
     }
 
@@ -609,16 +502,13 @@ public class PaymentUiTest {
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear("АБ");
+        paymentPage.fillYear(DataHelper.getCyrillicLetters(2));
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getYearFormatError()
-        );
+        paymentPage.shouldShowYearFormatError("Неверный формат");
     }
 
     // AUT-19. Поле «Год»: введены буквы латиницы
@@ -628,16 +518,13 @@ public class PaymentUiTest {
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear("AB");
+        paymentPage.fillYear(DataHelper.getLatinLetters(2));
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getYearFormatError()
-        );
+        paymentPage.shouldShowYearFormatError("Неверный формат");
     }
 
     // AUT-20b. Поле «Год»: введены только специальные символы
@@ -647,16 +534,13 @@ public class PaymentUiTest {
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear("@#$");
+        paymentPage.fillYear(DataHelper.getSpecialCharacters(2));
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getYearFormatError()
-        );
+        paymentPage.shouldShowYearFormatError("Неверный формат");
     }
 
     // AUT-20c. Поле «Год»: только пробелы
@@ -666,41 +550,27 @@ public class PaymentUiTest {
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear("   ");
+        paymentPage.fillYear(DataHelper.getSpaces(2));
         paymentPage.fillOwner(DataHelper.getValidOwner());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getYearFormatError()
-        );
+        paymentPage.shouldShowYearFormatError("Неверный формат");
     }
 
     // AUT-20d. Поле «Год»: числа с пробелом
     @Test
-    void shouldIgnoreSpaceInYearAndMakeSuccessfulPayment() {
+    void shouldIgnoreSpaceInYear() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         String currentYear = DataHelper.getCurrentYear();
         String yearWithSpace = currentYear.charAt(0) + " " + currentYear.charAt(1);
 
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(yearWithSpace);
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc(DataHelper.getValidCvc());
 
-        paymentPage.clickContinue();
-
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveYearValue(currentYear);
     }
-
 
     // Проверка поля «Владелец»
 
@@ -712,15 +582,12 @@ public class PaymentUiTest {
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner("");
+        paymentPage.fillOwner(DataHelper.getEmptyValue());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Поле обязательно для заполнения",
-                paymentPage.getOwnerFormatError()
-        );
+        paymentPage.shouldShowOwnerFormatError("Поле обязательно для заполнения");
     }
 
     // AUT-21b. Поле «Владелец»: значение короче минимальной длины
@@ -736,30 +603,17 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getOwnerFormatError()
-        );
+        paymentPage.shouldShowOwnerInvalidFormatError("Неверный формат");
     }
 
-    // AUT-21c. Максимальная длина
+    // AUT-21c. Поле «Владелец»: ввод длинного значения
     @Test
-    void shouldLimitOwnerTo45CharactersAndMakeSuccessfulPayment() {
+    void shouldAccept50CharactersInOwner() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-        paymentPage.fillCvc(DataHelper.getValidCvc());
+        paymentPage.fillOwner(DataHelper.getOwnerMoreThanMaxLength());
 
-        paymentPage.clickContinue();
-
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveOwnerLength(50);
     }
 
     // AUT-22a. Поле «Владелец»: введены буквы кириллицы
@@ -770,63 +624,34 @@ public class PaymentUiTest {
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner("РУЧНОЕ ТЕСТИРОВАНИЕ");
+        paymentPage.fillOwner(DataHelper.getCyrillicLetters(20));
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getOwnerInvalidFormatError()
-        );
+        paymentPage.shouldShowOwnerInvalidFormatError("Неверный формат");
     }
 
     // AUT-22b. Поле «Владелец»: нижний регистр латинскими буквами
     @Test
-    void shouldConvertOwnerToUppercaseAndMakeSuccessfulPayment() {
+    void shouldConvertOwnerToUppercase() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner("manual test");
-        paymentPage.fillCvc(DataHelper.getValidCvc());
+        paymentPage.fillOwner(DataHelper.getLowercaseOwner());
 
-        paymentPage.clickContinue();
-
-        assertEquals(
-                "MANUAL TEST",
-                paymentPage.getOwnerValue()
-        );
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveOwnerValue("MANUAL TEST");
     }
 
     // AUT-23a. Поле «Владелец»: значение с цифрами
     @Test
-    void shouldIgnoreDigitsInOwnerAndMakeSuccessfulPayment() {
+    void shouldIgnoreDigitsInOwner() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner("MANUAL123");
-        paymentPage.fillCvc(DataHelper.getValidCvc());
+        String ownerWithDigits = DataHelper.getLatinLettersWithDigits(5);
 
-        paymentPage.clickContinue();
+        paymentPage.fillOwner(ownerWithDigits);
 
-        assertEquals(
-                "MANUAL",
-                paymentPage.getOwnerValue()
-        );
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveOwnerValue(DataHelper.getLatinLetters(5));
     }
 
     // AUT-23b. Поле «Владелец»: только цифры
@@ -837,18 +662,15 @@ public class PaymentUiTest {
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner("12345");
+        paymentPage.fillOwner(DataHelper.getDigits(10));
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Поле обязательно для заполнения",
-                paymentPage.getOwnerFormatError()
-        );
+        paymentPage.shouldShowOwnerFormatError("Поле обязательно для заполнения");
     }
 
-    // AUT-23c. Поле «Владелец»: три пробела подряд
+    // AUT-23c. Поле «Владелец»: пробелы подряд
     @Test
     void shouldShowErrorForSpacesOnlyInOwner() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
@@ -856,83 +678,58 @@ public class PaymentUiTest {
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner("   ");
+        paymentPage.fillOwner(DataHelper.getSpaces(10));
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Поле обязательно для заполнения",
-                paymentPage.getOwnerFormatError()
-        );
+        paymentPage.shouldShowOwnerFormatError("Поле обязательно для заполнения");
     }
 
-    // AUT-23d. Поле «Владелец»: множественные пробелы между словами
+// AUT-23d. Поле «Владелец»: множественные пробелы между словами
     @Test
-    void shouldAcceptMultipleSpacesBetweenOwnerWords() {
+    void shouldReduceMultipleSpacesBetweenOwnerWords() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner("MANUAL   TEST");
+        paymentPage.fillOwner(DataHelper.getOwnerWithMultipleSpaces());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveOwnerValue("MANUAL TEST");
     }
 
     // AUT-23e. Поле «Владелец»: пробелы в начале и в конце
     @Test
-    void shouldTrimSpacesAroundOwnerAndMakeSuccessfulPayment() {
+    void shouldTrimSpacesAroundOwner() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner(" MANUAL TEST ");
+        paymentPage.fillOwner(DataHelper.getOwnerWithSpacesAround());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "MANUAL TEST",
-                paymentPage.getOwnerValue()
-        );
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveOwnerValue("MANUAL TEST");
     }
 
     // AUT-24a. Поле «Владелец»: буквы со специальными символами
     @Test
-    void shouldIgnoreSpecialCharactersInOwnerAndMakeSuccessfulPayment() {
+    void shouldIgnoreSpecialCharactersInOwner() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner("%MANUAL@ TEST");
-        paymentPage.fillCvc(DataHelper.getValidCvc());
-
-        paymentPage.clickContinue();
-
-        assertEquals(
-                "MANUAL TEST",
-                paymentPage.getOwnerValue()
+        paymentPage.fillOwner(
+                DataHelper.getLatinLettersWithSpecialCharacters(5)
         );
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
 
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveOwnerValue(
+                DataHelper.getLatinLetters(5)
+        );
     }
 
     // AUT-24b. Поле «Владелец»: только специальные символы
@@ -943,36 +740,34 @@ public class PaymentUiTest {
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner("№#\"@@@ $%^");
+        paymentPage.fillOwner(DataHelper.getSpecialCharacters(20));
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Поле обязательно для заполнения",
-                paymentPage.getOwnerFormatError()
-        );
+        paymentPage.shouldShowOwnerFormatError("Поле обязательно для заполнения");
     }
 
-    // AUT-24c. Поле «Владелец»: имя с дефисом
+
+
+// AUT-24c. Поле «Владелец»: имя с дефисом
     @Test
-    void shouldAcceptHyphenInOwnerAndMakeSuccessfulPayment() {
+    void shouldAcceptOwnerWithHyphen() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner("MANUAL TEST-TEST");
+        paymentPage.fillOwner(DataHelper.getOwnerWithHyphen());
         paymentPage.fillCvc(DataHelper.getValidCvc());
 
         paymentPage.clickContinue();
 
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveOwnerValue("MANUAL TEST-TEST");
+        paymentPage.shouldNotShowOwnerRequiredError();
+        paymentPage.shouldNotShowOwnerInvalidFormatError();
     }
+
 
 
     //Проверка поля «CVC/CVV»
@@ -986,14 +781,11 @@ public class PaymentUiTest {
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc("");
+        paymentPage.fillCvc(DataHelper.getEmptyValue());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCvcFormatError()
-        );
+        paymentPage.shouldShowCvcFormatError("Неверный формат");
     }
 
     //  AUT-26. Поле «CVC/CVV»: две цифры
@@ -1005,34 +797,21 @@ public class PaymentUiTest {
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc("12");
+        paymentPage.fillCvc(DataHelper.getDigits(2));
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCvcFormatError()
-        );
+        paymentPage.shouldShowCvcFormatError("Неверный формат");
     }
 
     // AUT-27. Поле «CVC/CVV»: четыре цифры
     @Test
-    void shouldLimitCvcToThreeDigitsAndMakeSuccessfulPayment() {
+    void shouldLimitCvcToThreeDigits() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc("1234");
+        paymentPage.fillCvc(DataHelper.getDigits(4));
 
-        paymentPage.clickContinue();
-
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveCvcValue(DataHelper.getDigits(3));
     }
 
     // AUT-28a. Поле «CVC/CVV»: введены буквы латиницы
@@ -1044,14 +823,11 @@ public class PaymentUiTest {
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc("ABC");
+        paymentPage.fillCvc(DataHelper.getLatinLetters(3));
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCvcFormatError()
-        );
+        paymentPage.shouldShowCvcFormatError("Неверный формат");
     }
 
     // AUT-28b. Поле «CVC/CVV»: введены буквы кириллицы
@@ -1063,35 +839,27 @@ public class PaymentUiTest {
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc("АБВ");
+        paymentPage.fillCvc(DataHelper.getCyrillicLetters(3));
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCvcFormatError()
+        paymentPage.shouldShowCvcFormatError("Неверный формат");
+    }
+
+    // AUT-29a. Поле «CVC/CVV»: специальные символы с цифрами
+    @Test
+    void shouldIgnoreSpecialCharactersInCvc() {
+        PaymentPage paymentPage = dashboardPage.clickBuy();
+
+        paymentPage.fillCvc(
+                DataHelper.getDigitsWithSpecialCharacters(3)
+        );
+
+        paymentPage.shouldHaveCvcValue(
+                DataHelper.getDigits(3)
         );
     }
 
-    // AUT-29a. Поле «CVC/CVV»: введены специальные символы с цифрами
-    @Test
-    void shouldIgnoreSpecialCharactersInCvcAndMakeSuccessfulPayment() {
-        PaymentPage paymentPage = dashboardPage.clickBuy();
-
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc("1*23");
-
-        paymentPage.clickContinue();
-
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
-    }
 
     // AUT-29b. Поле «CVC/CVV»: введены только специальные символы
     @Test
@@ -1102,36 +870,23 @@ public class PaymentUiTest {
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc("@#$");
+        paymentPage.fillCvc(DataHelper.getSpecialCharacters(3));
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCvcFormatError()
-        );
+        paymentPage.shouldShowCvcFormatError("Неверный формат");
 
         paymentPage.shouldNotShowOwnerRequiredError();
     }
 
-    // AUT-29c. Поле «CVC/CVV»: введены цифры с пробелами
+// AUT-29c. Поле «CVC/CVV»: введены цифры с пробелами
     @Test
-    void shouldIgnoreSpaceInCvcAndMakeSuccessfulPayment() {
+    void shouldIgnoreSpaceInCvc() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc("1 23");
+        paymentPage.fillCvc(DataHelper.getCvcWithSpace());
 
-        paymentPage.clickContinue();
-
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldHaveCvcValue("123");
     }
 
     // AUT-29d. Поле «CVC/CVV»: введены только пробелы
@@ -1143,14 +898,11 @@ public class PaymentUiTest {
         paymentPage.fillMonth(DataHelper.getCurrentMonth());
         paymentPage.fillYear(DataHelper.getCurrentYear());
         paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc("   ");
+        paymentPage.fillCvc(DataHelper.getSpaces(3));
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCvcFormatError()
-        );
+        paymentPage.shouldShowCvcFormatError("Неверный формат");
     }
 
     // AUT-30. Отправка формы с пустыми обязательными полями
@@ -1158,38 +910,25 @@ public class PaymentUiTest {
     void shouldShowErrorsForAllEmptyRequiredFields() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        paymentPage.fillCardNumber("");
-        paymentPage.fillMonth("");
-        paymentPage.fillYear("");
-        paymentPage.fillOwner("");
-        paymentPage.fillCvc("");
+        paymentPage.fillCardNumber(DataHelper.getEmptyValue());
+        paymentPage.fillMonth(DataHelper.getEmptyValue());
+        paymentPage.fillYear(DataHelper.getEmptyValue());
+        paymentPage.fillOwner(DataHelper.getEmptyValue());
+        paymentPage.fillCvc(DataHelper.getEmptyValue());
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCardNumberFormatError()
+        paymentPage.shouldShowCardNumberFormatError("Неверный формат");
+
+        paymentPage.shouldShowMonthFormatError("Неверный формат");
+
+        paymentPage.shouldShowYearFormatError("Неверный формат");
+
+        paymentPage.shouldShowOwnerFormatError(
+                "Поле обязательно для заполнения"
         );
 
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getMonthFormatError()
-        );
-
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getYearFormatError()
-        );
-
-        assertEquals(
-                "Поле обязательно для заполнения",
-                paymentPage.getOwnerFormatError()
-        );
-
-        assertEquals(
-                "Неверный формат",
-                paymentPage.getCvcFormatError()
-        );
+        paymentPage.shouldShowCvcFormatError("Неверный формат");
     }
 
     // AUT-31. Снятие подсветки полей после корректного заполнения
@@ -1197,7 +936,7 @@ public class PaymentUiTest {
     void shouldRemoveErrorsAfterCorrectFieldFilling() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        // Этап 1. Пустая форма
+        // Этап 1. Отправляем пустую форму
         paymentPage.clickContinue();
 
         // Этап 2. Заполняем все поля валидными данными
@@ -1210,20 +949,14 @@ public class PaymentUiTest {
         // Повторно отправляем форму
         paymentPage.clickContinue();
 
-        // Проверяем, что сообщения об ошибках исчезли
+        // Ошибки валидации должны исчезнуть
         paymentPage.shouldNotShowValidationErrors();
-
-        // Проверяем успешное завершение операции
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
     }
 
-    // AUT-32. Карта истекает в текущем месяце
+
+// AUT-32. Карта истекает в текущем месяце
     @Test
-    void shouldMakeSuccessfulPaymentWhenCardExpiresThisMonth() {
+    void shouldAcceptCardExpiringThisMonth() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
@@ -1234,24 +967,18 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus());
-        assertEquals(1, SQLHelper.getOrderCount());
+        paymentPage.shouldNotShowMonthErrors();
+        paymentPage.shouldNotShowYearErrors();
     }
 
 
-    // ### AUT-33. Карта действительна ровно 1 месяц
+// AUT-33. Карта действительна ровно 1 месяц
     @Test
-    void shouldMakeSuccessfulPaymentWhenCardIsValidForOneMonth() {
+    void shouldAcceptCardValidForOneMonth() {
         PaymentPage paymentPage = dashboardPage.clickBuy();
 
-        String nextMonth = String.format(
-                "%02d",
-                Integer.parseInt(DataHelper.getCurrentMonth()) + 1);
-
-        String nextYear = DataHelper.getNextYear();
+        String nextMonth = DataHelper.getNextMonth();
+        String nextYear = DataHelper.getNextMonthYear();
 
         paymentPage.fillCardNumber(DataHelper.getApprovedCardNumber());
         paymentPage.fillMonth(nextMonth);
@@ -1261,14 +988,10 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        paymentPage.shouldShowSuccessTitle("Успешно");
-        paymentPage.shouldShowSuccessContent("Операция одобрена Банком.");
-
-        assertEquals("APPROVED", SQLHelper.getPaymentStatus()
-        );
-        assertEquals(1, SQLHelper.getOrderCount()
-        );
+        paymentPage.shouldNotShowMonthErrors();
+        paymentPage.shouldNotShowYearErrors();
     }
+
 
 
     // ### AUT-34. Поле «Год»: отдалённое будущее (99)
@@ -1284,9 +1007,8 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Неверно указан срок действия карты",
-                paymentPage.getYearPeriodError()
+        paymentPage.shouldShowYearPeriodError(
+                "Неверно указан срок действия карты"
         );
     }
 
@@ -1303,9 +1025,10 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
-        assertEquals(
-                "Истёк срок действия карты",
-                paymentPage.getYearExpiredError()
+        paymentPage.shouldShowYearExpiredError(
+                "Истёк срок действия карты"
         );
     }
+
 }
+

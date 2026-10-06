@@ -23,7 +23,7 @@ dependencies {
     testImplementation 'commons-dbutils:commons-dbutils:1.8.1'
     testImplementation 'com.mysql:mysql-connector-j:9.0.0'
 
-    testImplementation 'io.qameta.allure:allure-selenide:2.29.1'
+    testImplementation 'io.qameta.allure:allure-selenide:2.27.0'
     testImplementation 'org.slf4j:slf4j-simple:2.0.3'
 
     testImplementation 'org.projectlombok:lombok:1.18.36'
@@ -42,7 +42,4 @@ test {
             )
 }
 
-allure {
-    version = '2.29.1'
-    autoconfigure = true
-}
+

@@ -101,9 +101,7 @@ artifacts/aqa-shop.jar
 Запустить приложение:
 
 ```bash
-java -Dspring.credit-gate.url=http://localhost:9090 \
-     -Dspring.payment-gate.url=http://localhost:9090 \
-     -jar artifacts/aqa-shop.jar
+java -jar artifacts/aqa-shop.jar
 ```
 
 После запуска приложение доступно по адресу:
