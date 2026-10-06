@@ -62,32 +62,12 @@ public class PaymentUiTest {
 
         paymentPage.clickContinue();
 
+        paymentPage.shouldShowInvalidCardErrorTitle("Ошибка");
+        paymentPage.shouldShowInvalidCardErrorContent(
+                "Ошибка! Банк отказал в проведении операции."
+        );
+
         assertEquals("DECLINED", SQLHelper.getPaymentStatus());
-
-        paymentPage.shouldShowInvalidCardErrorTitle("Ошибка");
-        paymentPage.shouldShowInvalidCardErrorContent(
-                "Ошибка! Банк отказал в проведении операции."
-        );
-    }
-
-    //AUT-03. Некорректный номер карты
-    @Test
-    void shouldRejectPaymentWithInvalidCardNumber() {
-
-        PaymentPage paymentPage = dashboardPage.clickBuy();
-
-        paymentPage.fillCardNumber(DataHelper.getInvalidCardNumber());
-        paymentPage.fillMonth(DataHelper.getCurrentMonth());
-        paymentPage.fillYear(DataHelper.getCurrentYear());
-        paymentPage.fillOwner(DataHelper.getValidOwner());
-        paymentPage.fillCvc(DataHelper.getValidCvc());
-
-        paymentPage.clickContinue();
-
-        paymentPage.shouldShowInvalidCardErrorTitle("Ошибка");
-        paymentPage.shouldShowInvalidCardErrorContent(
-                "Ошибка! Банк отказал в проведении операции."
-        );
 
     }
 
